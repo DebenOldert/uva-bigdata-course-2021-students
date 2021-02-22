@@ -12,7 +12,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.*;
 
 public class FilteringWordCount extends HadoopJob {
 
@@ -33,16 +33,37 @@ public class FilteringWordCount extends HadoopJob {
 
     public static class TokenizerMapper extends Mapper<Object, Text, Text, IntWritable> {
 
+        private final static IntWritable ONE = new IntWritable(1);
+        private final Text word = new Text();
+
         public void map(Object key, Text value, Mapper.Context context) throws IOException, InterruptedException {
-            // TODO Implement me
+            StringTokenizer tokenizer = new StringTokenizer(value.toString());
+            while (tokenizer.hasMoreTokens()) {
+                String w = tokenizer.nextToken().toLowerCase().replaceAll("[^a-z]", "");
+                ArrayList<String> exclude = new ArrayList<>();
+                exclude.add("to");
+                exclude.add("the");
+
+                if(!exclude.contains(w)){
+                    word.set(w);
+                    context.write(word, ONE);
+                }
+            }
         }
     }
 
     public static class IntSumReducer extends Reducer<Text,IntWritable,Text,IntWritable> {
 
+        private final IntWritable result = new IntWritable();
+
         public void reduce(Text key, Iterable<IntWritable> values, Context context)
                 throws IOException, InterruptedException {
-            // TODO Implement me
+            int sum = 0;
+            for (IntWritable val : values) {
+                sum += val.get();
+            }
+            result.set(sum);
+            context.write(key, result);
         }
     }
 }

@@ -17,13 +17,29 @@ public class BooksWritable  implements Writable {
 
     @Override
     public void write(DataOutput out) throws IOException {
-        // TODO Implement me
+        out.writeInt(books.length);
+        for (Book book: books) {
+            out.writeUTF(book.getTitle());
+            out.writeInt(book.getYear());
+        }
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        // TODO Implement me
+        int numbooks = in.readInt();
+        this.books = new Book[numbooks];
+        for(int i = 0; i < numbooks; i++){
+            String bookName = in.readUTF();
+            int year = in.readInt();
+            books[i] = new Book(bookName, year);
+        }
     }
+
+    @Override
+    public String toString() {
+        return "BooksWritable{" +  "books=" + Arrays.toString(books) + '}';
+    }
+
 
     @Override
     public boolean equals(Object o) {

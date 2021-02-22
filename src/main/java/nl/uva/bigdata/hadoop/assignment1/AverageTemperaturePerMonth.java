@@ -1,12 +1,10 @@
 package nl.uva.bigdata.hadoop.assignment1;
 
 
+import com.google.common.collect.Iterators;
 import nl.uva.bigdata.hadoop.HadoopJob;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -17,6 +15,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -69,12 +68,14 @@ public class AverageTemperaturePerMonth extends HadoopJob {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      // TODO Implement me
+      out.writeInt(getYear());
+      out.writeInt(getMonth());
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      // TODO Implement me
+      setYear(in.readInt());
+      setMonth(in.readInt());
     }
 
     @Override
@@ -104,17 +105,49 @@ public class AverageTemperaturePerMonth extends HadoopJob {
   }
 
   public static class MeasurementsMapper extends Mapper<Object, Text, YearMonthWritable, IntWritable> {
+    private final static IntWritable TEMP = new IntWritable(0);
+    private final YearMonthWritable YM = new YearMonthWritable();
 
     public void map(Object key, Text value, Mapper.Context context) throws IOException, InterruptedException {
-      // TODO Implement me
+
+      String[] parts = value.toString().split("\t");
+
+      YM.setYear(Integer.parseInt(parts[0]));
+      YM.setMonth(Integer.parseInt(parts[1]));
+
+      Integer temp = Integer.parseInt(parts[2]);
+      Double quality = Double.parseDouble(parts[3]);
+
+      Double minQ = context.getConfiguration().getDouble("__UVA_minimumQuality", 0);
+
+      if(quality >= minQ){
+        TEMP.set(temp);
+        context.write(YM, TEMP);
+      }
+
     }
   }
 
   public static class AveragingReducer extends Reducer<YearMonthWritable,IntWritable,Text,NullWritable> {
 
+    private final Text word = new Text();
+
     public void reduce(YearMonthWritable yearMonth, Iterable<IntWritable> temperatures, Context context)
             throws IOException, InterruptedException {
-      // TODO Implement me
+      int n = 0;
+
+      int s = 0;
+      for (IntWritable temp: temperatures){
+        s += temp.get();
+        n++;
+      }
+
+      double avg = ((double)s / (double)n);
+
+      word.set(yearMonth.year + "\t"+ yearMonth.month + "\t" + avg);
+
+      context.write(word, NullWritable.get());
+
     }
   }
 }
