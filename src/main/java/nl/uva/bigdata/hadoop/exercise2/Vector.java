@@ -4,4 +4,5 @@ public interface Vector {
 
     public int dimension();
     public double dot(Vector other);
+    public double get(int i);
 }
